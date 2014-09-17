@@ -25,6 +25,7 @@ var scoreGap = 0;
 var lastGame;
 var lastKey;
 var fbScore1 = 0;
+var playerNum = 0;
 
 
 $(window).ready(function() {
@@ -49,7 +50,7 @@ $(function() {
 });
 
 app.controller('boardController', ['$scope', '$interval', '$firebase', function ($scope, $interval, $firebase) {
-
+	$scope.boxrows = [[null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null]];
 
 // start of firebase code for online multiplayer ------------------------
 
@@ -57,16 +58,20 @@ var ticTacRef = new Firebase('https://tictactoe-3001.firebaseio.com/games');
 
 ticTacRef.on('child_changed', function(snapshot) {
 	var sync = snapshot.val();
-	$scope.displayResults(sync.p1, sync.p2, sync.p1SC, sync.p2SC, sync.marker, sync.rows);
+	$scope.displayResults(sync.p1, sync.p2, sync.p1SC, sync.p2SC, sync.mainClock);
 });
-$scope.displayResults = function(p1, p2, sc1, sc2, xo, rows) {
+$scope.displayResults = function(p1, p2, sc1, sc2, mainClock) {
 	$scope.p1Score = p1;
 	$scope.p2Score = p2;
-	$scope.shotclock1 = sc1;
-	$scope.shotclock2 = sc2;
-	$scope.col = xo;
-	$scope.boxrows = rows;
+	$scope.fireShotclock1 = sc1;
+	$scope.fireShotclock2 = sc2;
+	$scope.fireTimer = mainClock;
+
+	// $scope.col = xo;
+	// $scope.boxrows = rows;
 };
+
+
 ticTacRef.once('value', function (snapshot) {
 	var games = snapshot.val();
 	if (games === null) {
@@ -80,14 +85,14 @@ ticTacRef.once('value', function (snapshot) {
 		console.log(lastKey + " :this person's key");
 
 		if (lastGame.waiting === true) {
-			alert('wait');
 			lastGame = ticTacRef.child(lastKey);
-			lastGame.update({
+			lastGame.set({
 				waiting: false,
+				mainClock: 0,
 				rows: [["","","","","","","",""],["","","","","","","",""],["","","A","t","e","s","t",""]],
 				p1: 0,
-				p2: 0,
 				p1SC: 0,
+				p2: 0,
 				p2SC: 0,
 				marker: "",
 			});
@@ -101,6 +106,22 @@ ticTacRef.once('value', function (snapshot) {
 	$scope.game = $firebase(lastGame);
 });
 
+runFirebase = $interval(function() {
+	if (playerNum === 2) {
+		lastGame.update({
+			mainClock: $scope.timer,
+		});
+	}
+}, 500);
+
+runShotclockFirebase = $interval(function() {
+	if (playerNum === 2) {
+		lastGame.update({
+			p1SC: $scope.shotclock1,
+			p2SC: $scope.shotclock2,
+		});
+	}
+}, 200);
 	$scope.timer = 0;
 	$scope.markerFX = 'X';
 	clearBoard = function() {
@@ -179,11 +200,8 @@ ticTacRef.once('value', function (snapshot) {
 			}
 			// sets function to start the round clock
 			$scope.countdown = function() {
-				lastGame.update({
-					p1SC: $scope.shotclock1,
-					p2SC: $scope.shotclock2
-				});
 				runShot = $interval(function() {
+					
 					// counts until reaches zero
 					if ($scope.shotclock1 > 0) {
 						$scope.shotclock1 = $scope.shotclock1 - 1;
@@ -200,6 +218,7 @@ ticTacRef.once('value', function (snapshot) {
 					}
 					else if ($scope.shotclock2 > 0) {
 						$scope.shotclock2 = $scope.shotclock2 - 1;
+					
 						if ($scope.shotclock2 < 3) {
 						$('.danger2').css({
 							'color': '#F00',
@@ -217,6 +236,7 @@ ticTacRef.once('value', function (snapshot) {
 					else if ($scope.shotclock2 === 0){
 						altTurn();
 					}
+				
 				}, 1000);
 			};
 			$scope.countdown();
@@ -244,10 +264,11 @@ ticTacRef.once('value', function (snapshot) {
 		shotClockStart();
 		};
 
+
 	$scope.makeMove = function(r, c) {
-		lastGame.update({
-			rows: $scope.boxrows,
-		});
+		// lastGame.update({
+		// 	rows: $scope.boxrows,
+		// });
 		cell = $scope.boxrows[r][c];
 		if (!cell) {
 			shotClockStart();

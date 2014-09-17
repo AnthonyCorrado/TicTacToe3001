@@ -12,7 +12,7 @@ body {
 	position: absolute;
 	background-color: rgba(0,0,0,.6);
 	z-index: 6;
-	/*display: none;*/
+/*	display: none;*/
 }
 .startPrompt {
 	margin: 0 5%;

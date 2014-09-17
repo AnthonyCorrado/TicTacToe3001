@@ -22,10 +22,8 @@ var clockBreak = true;
 var runShot;
 var stopShotClock = false;
 var scoreGap = 0;
+var lastGame;
 
-$(function() {
-   $('body').scrollTop(0);
-});
 
 $(window).ready(function() {
 	fontScaler();
@@ -48,8 +46,57 @@ $(function() {
     FastClick.attach(document.body);
 });
 
-app.controller('boardController', ['$scope', '$interval', function ($scope, $interval) {
+app.controller('boardController', ['$scope', '$interval', function ($scope, $interval, $firebase) {
 	$scope.boxrows = [[null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null]];
+
+// start of firebase code for online multiplayer ------------------------
+
+var ticTacRef = new Firebase('https://tictactoe-3001.firebaseio.com/games');
+// var gamesRef = ticTacRef.child("games");
+// gamesRef.set({
+// 	player1Score: 0,
+// 	player2Score: 0,
+// 	player1ShotClock: 0,
+// 	player2ShotClock: 0,
+// 	boxrows: [["","","","","","","",""],["","","","","","","",""],["","","","t","e","s","t",""]]
+// });
+ticTacRef.once('value', function (snapshot) {
+	var games = snapshot.val();
+	if (games === null) {
+		alert('null')
+		lastGame = ticTacRef.push( {waiting: true} );
+		playerNum = 1;
+	}
+	else {
+		var keys = Object.keys(games);
+		var lastKey = keys[ keys.length-1];
+		lastGame = games[lastKey];
+		console.log(lastGame + ' lastGame');
+		console.log(lastKey + " :this person's key");
+		if (lastGame.waiting === true) {
+			alert('wait');
+			lastGame = ticTacRef.child(lastKey);
+			lastGame.update({
+				waiting: false,
+				rows: [["","","","","","","",""],["","","","","","","",""],["","","","t","e","s","t",""]],
+				// player1Score: 0,
+				// player2Score: 0,
+				player1ShotClock: 0,
+				player2ShotClock: 0,
+			});
+		}
+		else {
+			alert('hmmm')
+		}
+	}
+});
+// nestedRef = ticTacRef.child('Eagles').set({
+// 		positions: {
+// 		quarterback: 'Nick Foles',
+// 		runningback: 'Lesean McCoy'
+// 	}
+// });
+// gamesRef.push( {waiting: true});
 
 	$scope.timer = 0;
 	$scope.markerFX = 'X';
@@ -319,6 +366,10 @@ app.controller('boardController', ['$scope', '$interval', function ($scope, $int
 			}
 			x.push(index);
 			scoreTally();
+			lastGame.update({
+				player1Score: p1ScoreIds.length-1,
+				player2Score: p2ScoreIds.length-1
+			});
 		}
 	};
 	var scoreTally = function() {
@@ -380,6 +431,9 @@ app.controller('boardController', ['$scope', '$interval', function ($scope, $int
 		$scope.clock = function(){
 			shotClockStart();
 			run = $interval(function(){
+				lastGame.update({
+					mainClock: $scope.timer
+				});
 				if (($scope.timer === 0 || boxesFull === true) && clockBreak ) {
 					hideUpNext();
 					summary();

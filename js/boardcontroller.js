@@ -59,7 +59,7 @@ ticTacRef.on('child_changed', function(snapshot) {
 	var sync = snapshot.val();
 	$scope.displayResults(sync.p1, sync.p2, sync.p1SC, sync.p2SC, sync.mainClock, sync.firerows);
 });
-
+// firebase
 $scope.displayResults = function(p1, p2, sc1, sc2, mc, rows) {
 	$scope.p1Score = p1;
 	$scope.p2Score = p2;

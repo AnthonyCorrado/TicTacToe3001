@@ -23,6 +23,8 @@ var runShot;
 var stopShotClock = false;
 var scoreGap = 0;
 var lastGame;
+var lastKey;
+var fbScore1 = 0;
 
 
 $(window).ready(function() {
@@ -46,24 +48,28 @@ $(function() {
     FastClick.attach(document.body);
 });
 
-app.controller('boardController', ['$scope', '$interval', function ($scope, $interval, $firebase) {
-	$scope.boxrows = [[null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null]];
+app.controller('boardController', ['$scope', '$interval', '$firebase', function ($scope, $interval, $firebase) {
+
 
 // start of firebase code for online multiplayer ------------------------
 
 var ticTacRef = new Firebase('https://tictactoe-3001.firebaseio.com/games');
-// var gamesRef = ticTacRef.child("games");
-// gamesRef.set({
-// 	player1Score: 0,
-// 	player2Score: 0,
-// 	player1ShotClock: 0,
-// 	player2ShotClock: 0,
-// 	boxrows: [["","","","","","","",""],["","","","","","","",""],["","","","t","e","s","t",""]]
-// });
+
+ticTacRef.on('child_changed', function(snapshot) {
+	var sync = snapshot.val();
+	$scope.displayResults(sync.p1, sync.p2, sync.p1SC, sync.p2SC, sync.marker, sync.rows);
+});
+$scope.displayResults = function(p1, p2, sc1, sc2, xo, rows) {
+	$scope.p1Score = p1;
+	$scope.p2Score = p2;
+	$scope.shotclock1 = sc1;
+	$scope.shotclock2 = sc2;
+	$scope.col = xo;
+	$scope.boxrows = rows;
+};
 ticTacRef.once('value', function (snapshot) {
 	var games = snapshot.val();
 	if (games === null) {
-		alert('null')
 		lastGame = ticTacRef.push( {waiting: true} );
 		playerNum = 1;
 	}
@@ -71,32 +77,29 @@ ticTacRef.once('value', function (snapshot) {
 		var keys = Object.keys(games);
 		var lastKey = keys[ keys.length-1];
 		lastGame = games[lastKey];
-		console.log(lastGame + ' lastGame');
 		console.log(lastKey + " :this person's key");
+
 		if (lastGame.waiting === true) {
 			alert('wait');
 			lastGame = ticTacRef.child(lastKey);
 			lastGame.update({
 				waiting: false,
-				rows: [["","","","","","","",""],["","","","","","","",""],["","","","t","e","s","t",""]],
-				// player1Score: 0,
-				// player2Score: 0,
-				player1ShotClock: 0,
-				player2ShotClock: 0,
+				rows: [["","","","","","","",""],["","","","","","","",""],["","","A","t","e","s","t",""]],
+				p1: 0,
+				p2: 0,
+				p1SC: 0,
+				p2SC: 0,
+				marker: "",
 			});
+			playerNum = 2;
 		}
 		else {
-			alert('hmmm')
+			lastGame = ticTacRef.push( {waiting: true} );
+			playerNum = 1;
 		}
 	}
+	$scope.game = $firebase(lastGame);
 });
-// nestedRef = ticTacRef.child('Eagles').set({
-// 		positions: {
-// 		quarterback: 'Nick Foles',
-// 		runningback: 'Lesean McCoy'
-// 	}
-// });
-// gamesRef.push( {waiting: true});
 
 	$scope.timer = 0;
 	$scope.markerFX = 'X';
@@ -111,8 +114,6 @@ ticTacRef.once('value', function (snapshot) {
 	$scope.introShow = false;
 
 	var grid = $scope.boxrows;
-	console.log($scope.boxrows);
-	console.log(p1ScoreIds.length);
 
 // ------------- cues up game and starts intro animations -------------->
 	$scope.startGame = function() {
@@ -178,6 +179,10 @@ ticTacRef.once('value', function (snapshot) {
 			}
 			// sets function to start the round clock
 			$scope.countdown = function() {
+				lastGame.update({
+					p1SC: $scope.shotclock1,
+					p2SC: $scope.shotclock2
+				});
 				runShot = $interval(function() {
 					// counts until reaches zero
 					if ($scope.shotclock1 > 0) {
@@ -220,6 +225,9 @@ ticTacRef.once('value', function (snapshot) {
 
 
 	altTurn = function () {
+		lastGame.update({
+				marker: mark
+			});
 		if (turnNum % 2 === 0) {
 			mark = "O";
 			$scope.markerFX = 'O';
@@ -237,6 +245,9 @@ ticTacRef.once('value', function (snapshot) {
 		};
 
 	$scope.makeMove = function(r, c) {
+		lastGame.update({
+			rows: $scope.boxrows,
+		});
 		cell = $scope.boxrows[r][c];
 		if (!cell) {
 			shotClockStart();
@@ -367,8 +378,8 @@ ticTacRef.once('value', function (snapshot) {
 			x.push(index);
 			scoreTally();
 			lastGame.update({
-				player1Score: p1ScoreIds.length-1,
-				player2Score: p2ScoreIds.length-1
+				p1: p1ScoreIds.length-1,
+				p2: p2ScoreIds.length-1
 			});
 		}
 	};
@@ -431,9 +442,6 @@ ticTacRef.once('value', function (snapshot) {
 		$scope.clock = function(){
 			shotClockStart();
 			run = $interval(function(){
-				lastGame.update({
-					mainClock: $scope.timer
-				});
 				if (($scope.timer === 0 || boxesFull === true) && clockBreak ) {
 					hideUpNext();
 					summary();
@@ -833,7 +841,6 @@ function specialFX(fx){
 	function momentumBar() {
 		jQuery( document ).ready(function( $ ) {
 			scoreGap = (p1Score - p2Score) * 20;
-			console.log(scoreGap);
 			if (scoreGap > 0) {
 				$('.scoring-bar1').animate({'width' : scoreGap + "%"}, 500);
 				$('.scoring-bar2').animate({'width' : (scoreGap * -1) + "%"}, 500);

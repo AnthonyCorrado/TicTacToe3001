@@ -57,7 +57,10 @@ var ticTacRef = new Firebase('https://tictactoe-3001.firebaseio.com/games');
 
 ticTacRef.on('child_changed', function(snapshot) {
 	var sync = snapshot.val();
+	$scope.turn1 = sync.isP1Turn;
+	$scope.turn2 = sync.isP2Turn;
 	$scope.displayResults(sync.p1, sync.p2, sync.p1SC, sync.p2SC, sync.mainClock, sync.firerows);
+	console.log('this is p1 Turn status: ' + $scope.turn1);
 });
 // firebase
 $scope.displayResults = function(p1, p2, sc1, sc2, mc, rows) {
@@ -66,13 +69,16 @@ $scope.displayResults = function(p1, p2, sc1, sc2, mc, rows) {
 	$scope.fireShotclock1 = sc1;
 	$scope.fireShotclock2 = sc2;
 	$scope.fireTimer = mc;
+	console.log('what is sync.firerows inside fucntion: ' + rows);
+	$scope.fireBox = rows;
+
 	// $scope.firebox = $scope.boxrows;
 
 	// $scope.col = xo;
 	// $scope.boxrows = rows;
 };
 
-
+console.log('scopey dopey turn: ' + $scope.turn1);
 ticTacRef.once('value', function (snapshot) {
 	var games = snapshot.val();
 	if (games === null) {
@@ -90,12 +96,13 @@ ticTacRef.once('value', function (snapshot) {
 			lastGame.set({
 				waiting: false,
 				mainClock: 0,
-				firerows: [["","","","","","","",""],["","","","","","","",""],["","","A","t","e","s","t",""]],
+				firerows: [["","","","","","","",""],["","","","","","","",""],["","","","t","e","s","t",""]],
 				p1: 0,
 				p1SC: 0,
 				p2: 0,
 				p2SC: 0,
-				marker: "",
+				isP1Turn: true,
+				isP2Turn: false,
 			});
 			playerNum = 2;
 		}
@@ -105,7 +112,10 @@ ticTacRef.once('value', function (snapshot) {
 		}
 	}
 	$scope.game = $firebase(lastGame);
+
+
 });
+
 
 runFirebase = $interval(function() {
 	if (playerNum === 2) {
@@ -134,7 +144,6 @@ runShotclockFirebase = $interval(function() {
 	$scope.score2 = p2ScoreIds;
 	$scope.halftimeShow = false;
 	$scope.introShow = false;
-
 	var grid = $scope.boxrows;
 
 // ------------- cues up game and starts intro animations -------------->
@@ -244,11 +253,15 @@ runShotclockFirebase = $interval(function() {
 		}
 	}
 
-
 	altTurn = function () {
-		lastGame.update({
-				marker: mark
+		// lastGame.update({
+		// 		marker: mark
+		// 	});
+		if(playerNum == 2){
+			lastGame.update({
+				firerows: $scope.boxrows
 			});
+		}
 		if (turnNum % 2 === 0) {
 			mark = "O";
 			$scope.markerFX = 'O';
@@ -272,17 +285,26 @@ runShotclockFirebase = $interval(function() {
 		// });
 		cell = $scope.boxrows[r][c];
 		if (cell == "") {
-			shotClockStart();
-      $scope.boxrows[r][c] = mark;
-      horizontalScoreCheck(mark);
-      verticalScoreCheck(mark);
-      diagonalScoreCheck(mark);
-      altTurn();
-      scoreTally();
-      roundOver();
-      lastGame.update({
-				firerows: $scope.boxrows
-			});
+			if(mark === "X" && $scope.turn1) {
+				shotClockStart();
+      	$scope.boxrows[r][c] = mark;
+      	horizontalScoreCheck(mark);
+      	verticalScoreCheck(mark);
+      	diagonalScoreCheck(mark);
+      	altTurn();
+      	scoreTally();
+      	roundOver();
+    	}
+    	else if (mark === "O" && $scope.turn2 ) {
+    		shotClockStart();
+      	$scope.boxrows[r][c] = mark;
+      	horizontalScoreCheck(mark);
+      	verticalScoreCheck(mark);
+      	diagonalScoreCheck(mark);
+      	altTurn();
+      	scoreTally();
+      	roundOver();
+      }
     }
 	};
 
@@ -791,10 +813,10 @@ function specialFX(fx){
 				$('.playersTurn2').fadeIn(350);
 				$('.playersTurn1').css({'display' : 'none'});
 			}
-			else {
-				if(windowWidth > 1024) {
-					$('.playersMarker').css({'text-shadow' : '5px 5px 8px rgba(22, 120, 255, 1)'});
-				}
+				else {
+					if(windowWidth > 1024) {
+						$('.playersMarker').css({'text-shadow' : '5px 5px 8px rgba(22, 120, 255, 1)'});
+					}
 				else {
 					$('.playersMarker').css({'text-shadow' : '3px 3px 6px rgba(22, 120, 255, 1)'});
 				}

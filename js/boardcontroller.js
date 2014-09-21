@@ -54,13 +54,9 @@ app.controller('boardController', ['$scope', '$interval', '$firebase', function 
 // start of firebase code for online multiplayer ------------------------
 
 var ticTacRef = new Firebase('https://tictactoe-3001.firebaseio.com/games');
-
 ticTacRef.on('child_changed', function(snapshot) {
 	var sync = snapshot.val();
-	$scope.turn1 = sync.isP1Turn;
-	$scope.turn2 = sync.isP2Turn;
 	$scope.displayResults(sync.p1, sync.p2, sync.p1SC, sync.p2SC, sync.mainClock, sync.firerows);
-	console.log('this is p1 Turn status: ' + $scope.turn1);
 });
 // firebase
 $scope.displayResults = function(p1, p2, sc1, sc2, mc, rows) {
@@ -70,15 +66,10 @@ $scope.displayResults = function(p1, p2, sc1, sc2, mc, rows) {
 	$scope.fireShotclock2 = sc2;
 	$scope.fireTimer = mc;
 	console.log('what is sync.firerows inside fucntion: ' + rows);
-	$scope.fireBox = rows;
-
-	// $scope.firebox = $scope.boxrows;
-
-	// $scope.col = xo;
-	// $scope.boxrows = rows;
+	console.log('this is p1 Turn status: ' + $scope.turn1);
+	$scope.boxrows = rows;
 };
 
-console.log('scopey dopey turn: ' + $scope.turn1);
 ticTacRef.once('value', function (snapshot) {
 	var games = snapshot.val();
 	if (games === null) {
@@ -101,14 +92,15 @@ ticTacRef.once('value', function (snapshot) {
 				p1SC: 0,
 				p2: 0,
 				p2SC: 0,
-				isP1Turn: true,
-				isP2Turn: false,
+				isP1Turn: "X",
+				isP2Turn: "O",
 			});
 			playerNum = 2;
 		}
 		else {
 			lastGame = ticTacRef.push( {waiting: true} );
 			playerNum = 1;
+			console.log('first player');
 		}
 	}
 	$scope.game = $firebase(lastGame);
@@ -126,7 +118,7 @@ runFirebase = $interval(function() {
 }, 500);
 
 runShotclockFirebase = $interval(function() {
-	if (playerNum === 2) {
+	if (playerNum === 2 && $scope.timer > 0) {
 		lastGame.update({
 			p1SC: $scope.shotclock1,
 			p2SC: $scope.shotclock2,
@@ -136,7 +128,7 @@ runShotclockFirebase = $interval(function() {
 	$scope.timer = 0;
 	$scope.markerFX = 'X';
 	clearBoard = function() {
-		$scope.boxrows = [[null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null]];
+		$scope.boxrows = [["","","","","","","",""],["","","","","","","",""],["","","","","","","",""]];
 		grid = $scope.boxrows;
 	};
 
@@ -149,6 +141,7 @@ runShotclockFirebase = $interval(function() {
 // ------------- cues up game and starts intro animations -------------->
 	$scope.startGame = function() {
 		$scope.roundStart();
+		$scope.turn1 = false;
 		$scope.shotclock1 = 0;
     $scope.shotclock2 = 0;
 		// bases countdown size on window width		
@@ -254,14 +247,6 @@ runShotclockFirebase = $interval(function() {
 	}
 
 	altTurn = function () {
-		// lastGame.update({
-		// 		marker: mark
-		// 	});
-		if(playerNum == 2){
-			lastGame.update({
-				firerows: $scope.boxrows
-			});
-		}
 		if (turnNum % 2 === 0) {
 			mark = "O";
 			$scope.markerFX = 'O';
@@ -280,12 +265,9 @@ runShotclockFirebase = $interval(function() {
 
 
 	$scope.makeMove = function(r, c) {
-		// lastGame.update({
-		// 	rows: $scope.boxrows,
-		// });
 		cell = $scope.boxrows[r][c];
-		if (cell == "") {
-			if(mark === "X" && $scope.turn1) {
+		if (cell == "" && mark === "X") {
+			console.log('marrrrrrrrkrkerer')
 				shotClockStart();
       	$scope.boxrows[r][c] = mark;
       	horizontalScoreCheck(mark);
@@ -294,8 +276,8 @@ runShotclockFirebase = $interval(function() {
       	altTurn();
       	scoreTally();
       	roundOver();
-    	}
-    	else if (mark === "O" && $scope.turn2 ) {
+    }
+    else if (cell == "" && mark === "O") {
     		shotClockStart();
       	$scope.boxrows[r][c] = mark;
       	horizontalScoreCheck(mark);
@@ -304,10 +286,15 @@ runShotclockFirebase = $interval(function() {
       	altTurn();
       	scoreTally();
       	roundOver();
-      }
     }
+    lastGame.update({
+		 'firerows': $scope.boxrows
+		});
 	};
-
+$scope.fireTurnAlt = function() {
+		$scope.turn1 = false;
+		console.log('called')
+};
 	var horizontalScoreCheck = function(mark) {
 		var r = 0; var c = 0;
 		if(roundCount === 1) {
@@ -947,6 +934,7 @@ function blink() {
 	}
 	setInterval(blinker, 400);
 }
+
 // end of jQuery section. Life gets boring from here --------------------->
 
 
